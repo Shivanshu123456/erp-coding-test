@@ -1,26 +1,57 @@
 from flask import Flask, jsonify
 import os
-# TODO: Import your database connector here
 import psycopg2
-from psycopg2.extras import RealDictCursor
-app = Flask(__name__)
 
-# TODO: Configure database connection using os.getenv('DATABASE_URL')
-DATABASE_URL = os.getenv("DATABASE_URL")
+app = Flask(__name__)
 
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(
+        host=os.getenv('DB_HOST', 'localhost'),
+        database=os.getenv('DB_NAME', 'erpdb'),
+        user=os.getenv('DB_USER', 'postgres'),
+        password=os.getenv('DB_PASSWORD', 'testpass'),
+        port=os.getenv('DB_PORT', 5432)
+    )
+
+
 @app.route('/api/inventory/alerts', methods=['GET'])
 def get_alerts():
-    """
-    TODO: Implement this function.
-    1. Connect to the database.
-    2. Query 'inventory' table where quantity <= reorder_level.
-    3. Return JSON list of products.
-    """
-    # REMOVE THIS LINE AND IMPLEMENT LOGIC
-    return jsonify([]), 500
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, product_name, quantity, reorder_level
+            FROM inventory
+            WHERE quantity <= reorder_level
+        """)
+
+        rows = cursor.fetchall()
+
+        alerts = []
+        for row in rows:
+            alerts.append({
+                "id": str(row[0]),
+                "product_name": row[1],
+                "quantity": row[2],
+                "reorder_level": row[3]
+            })
+
+        return jsonify(alerts), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
