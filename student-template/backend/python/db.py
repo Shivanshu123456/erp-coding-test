@@ -18,27 +18,29 @@ def get_db_connection():
 @app.route("/api/inventory/alerts", methods=["GET"])
 def get_alerts():
     conn = None
+    cursor = None
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT *
+            SELECT id, product_name, quantity, reorder_level
             FROM inventory
             WHERE quantity <= reorder_level
         """)
 
         rows = cursor.fetchall()
 
-        # Convert database rows to JSON-friendly dictionaries
-        columns = [desc[0] for desc in cursor.description]
         products = [
-            dict(zip(columns, row))
+            {
+                "id": str(row[0]),
+                "product_name": row[1],
+                "quantity": row[2],
+                "reorder_level": row[3]
+            }
             for row in rows
         ]
-
-        cursor.close()
 
         return jsonify(products), 200
 
@@ -46,6 +48,8 @@ def get_alerts():
         return jsonify({"error": str(e)}), 500
 
     finally:
+        if cursor:
+            cursor.close()
         if conn:
             conn.close()
 
