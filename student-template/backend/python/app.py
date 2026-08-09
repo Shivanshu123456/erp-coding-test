@@ -1,11 +1,16 @@
 from flask import Flask, jsonify
 import os
 # TODO: Import your database connector here
-
+import psycopg2
+from psycopg2.extras import RealDictCursor
 app = Flask(__name__)
 
 # TODO: Configure database connection using os.getenv('DATABASE_URL')
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL)
 @app.route('/api/inventory/alerts', methods=['GET'])
 def get_alerts():
     """
